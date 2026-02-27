@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './stores';
+
 import { DashboardLayout } from './components/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -13,8 +13,7 @@ import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AdminPage } from './pages/AdminPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const { isAuthenticated } = useAuthStore();
-    return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+    return <>{children}</>;
 }
 
 export default function App() {

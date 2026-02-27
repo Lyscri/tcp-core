@@ -1,0 +1,27 @@
+{
+    "name": "@tcp/shared-kafka",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "dependencies": {
+        "kafkajs": "^2.2.4",
+        "@tcp/shared-types": "*",
+        "@tcp/shared-utils": "*"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "@types/node": "^20.11.0"
+    }
+}

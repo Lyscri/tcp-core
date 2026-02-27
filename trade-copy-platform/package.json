@@ -1,0 +1,36 @@
+{
+  "name": "trade-copy-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:gateway": "npm run dev -w services/api-gateway",
+    "dev:auth": "npm run dev -w services/auth-service",
+    "dev:account": "npm run dev -w services/account-service",
+    "dev:trade-sync": "npm run dev -w services/trade-sync-engine",
+    "dev:risk": "npm run dev -w services/risk-engine",
+    "dev:broker": "npm run dev -w services/broker-adapters",
+    "dev:analytics": "npm run dev -w services/analytics-service",
+    "dev:ws": "npm run dev -w services/websocket-gateway",
+    "dev:payment": "npm run dev -w services/payment-service",
+    "dev:admin": "npm run dev -w services/admin-service",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev:auth & npm run dev:account & npm run dev:gateway",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "eslint": "^8.56.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

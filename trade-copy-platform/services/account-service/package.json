@@ -1,0 +1,25 @@
+{
+    "name": "@tcp/account-service",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsx watch src/index.ts",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "hono": "^4.0.0",
+        "@hono/node-server": "^1.4.0",
+        "@tcp/shared-types": "*",
+        "@tcp/shared-utils": "*",
+        "@tcp/shared-db": "*",
+        "@tcp/shared-redis": "*",
+        "@tcp/shared-kafka": "*"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "@types/node": "^20.11.0",
+        "tsx": "^4.7.0"
+    }
+}

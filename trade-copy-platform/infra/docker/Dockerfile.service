@@ -1,0 +1,23 @@
+# Multi-stage Dockerfile for all TypeScript microservices
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package.json tsconfig.base.json ./
+COPY packages/ packages/
+ARG SERVICE_PATH
+COPY ${SERVICE_PATH}/package.json ${SERVICE_PATH}/
+COPY ${SERVICE_PATH}/tsconfig.json ${SERVICE_PATH}/
+COPY ${SERVICE_PATH}/src/ ${SERVICE_PATH}/src/
+RUN npm install --workspaces --if-present 2>/dev/null || npm install
+RUN cd ${SERVICE_PATH} && npx tsc || true
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+ARG SERVICE_PATH
+COPY --from=builder /app/${SERVICE_PATH} ./${SERVICE_PATH}
+USER appuser
+EXPOSE 3000
+CMD ["sh", "-c", "cd ${SERVICE_PATH} && node --loader tsx/esm src/index.ts"]

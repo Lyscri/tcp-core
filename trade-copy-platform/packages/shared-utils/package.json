@@ -1,0 +1,28 @@
+{
+    "name": "@tcp/shared-utils",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch"
+    },
+    "dependencies": {
+        "pino": "^8.17.2",
+        "nanoid": "^5.0.4",
+        "zod": "^3.22.4",
+        "@tcp/shared-types": "*"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "@types/node": "^20.11.0"
+    }
+}

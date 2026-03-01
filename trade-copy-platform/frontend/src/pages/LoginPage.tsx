@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores';
+import { api } from '../lib/api';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export function LoginPage() {
@@ -20,35 +21,28 @@ export function LoginPage() {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, twoFactorCode: needs2FA ? twoFactorCode : undefined }),
+            const body = await api.post<any>('/auth/login', {
+                email,
+                password,
+                twoFactorCode: needs2FA ? twoFactorCode : undefined
             });
 
-            const body = await response.json();
-            if (!body.success) {
-                setError(body.error?.message ?? 'Login failed');
-                return;
-            }
-
-            if (body.data.requiresTwoFactor) {
+            if (body.requiresTwoFactor) {
                 setNeeds2FA(true);
                 return;
             }
 
-            setTokens(body.data.accessToken, body.data.refreshToken);
+            setTokens(body.accessToken, body.refreshToken);
 
             // Fetch profile
-            const profileRes = await fetch('/api/auth/profile', {
-                headers: { Authorization: `Bearer ${body.data.accessToken}` },
-            });
-            const profileBody = await profileRes.json();
-            if (profileBody.success) setUser(profileBody.data);
+            const profileBody = await api.get<any>('/auth/me');
+            if (profileBody.user) {
+                setUser(profileBody.user);
+            }
 
             navigate('/');
-        } catch {
-            setError('Network error');
+        } catch (err: any) {
+            setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }

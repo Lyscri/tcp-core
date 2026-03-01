@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore, useUIStore } from '../stores';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { LayoutDashboard, Users, Link2, Shield, Activity, BarChart3, CreditCard, Settings, LogOut, ChevronLeft, Wifi, WifiOff, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, Link2, Shield, Activity, BarChart3, CreditCard, Settings, LogOut, ChevronLeft, Wifi, WifiOff, Menu, Sun, Moon } from 'lucide-react';
 import clsx from 'clsx';
 
 const navItems = [
@@ -17,7 +17,7 @@ const navItems = [
 
 export function DashboardLayout() {
     const { user, logout } = useAuthStore();
-    const { sidebarCollapsed, toggleSidebar } = useUIStore();
+    const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
     const { connected } = useWebSocket();
     const navigate = useNavigate();
 
@@ -69,6 +69,10 @@ export function DashboardLayout() {
                         {connected ? <Wifi size={14} className="text-emerald-400" /> : <WifiOff size={14} className="text-red-400" />}
                         {!sidebarCollapsed && <span className="text-xs text-surface-200/50">{connected ? 'Live' : 'Offline'}</span>}
                     </div>
+                    <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-surface-200/50 hover:text-white hover:bg-surface-700/50 transition-all text-sm">
+                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        {!sidebarCollapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+                    </button>
                     <button onClick={toggleSidebar} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-surface-200/50 hover:text-white hover:bg-surface-700/50 transition-all text-sm">
                         {sidebarCollapsed ? <Menu size={18} /> : <><ChevronLeft size={18} /><span>Collapse</span></>}
                     </button>
@@ -99,3 +103,4 @@ export function DashboardLayout() {
         </div>
     );
 }
+

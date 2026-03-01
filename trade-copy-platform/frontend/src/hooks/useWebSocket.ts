@@ -1,11 +1,15 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuthStore } from '../stores';
+import { USE_MOCKS } from '../lib/api';
 
 interface WsMessage {
     type: string;
     payload: unknown;
     timestamp: number;
 }
+
+const SYMBOLS = ['EURUSD', 'GBPUSD', 'XAUUSD', 'US30', 'BTCUSD'];
+const SIDES = ['BUY', 'SELL'];
 
 export function useWebSocket() {
     const wsRef = useRef<WebSocket | null>(null);
@@ -15,9 +19,47 @@ export function useWebSocket() {
     const [riskAlerts, setRiskAlerts] = useState<WsMessage[]>([]);
     const { accessToken, isAuthenticated } = useAuthStore();
     const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+    const mockInterval = useRef<ReturnType<typeof setInterval>>();
 
     const connect = useCallback(() => {
         if (!accessToken || wsRef.current?.readyState === WebSocket.OPEN) return;
+
+        if (USE_MOCKS) {
+            setConnected(true);
+            console.log('[WS MOCK] Connected');
+
+            // Randomly generate events
+            mockInterval.current = setInterval(() => {
+                const type = Math.random() > 0.8 ? 'RISK_ALERT' : 'TRADE_UPDATE';
+                let msg: WsMessage;
+
+                if (type === 'TRADE_UPDATE') {
+                    msg = {
+                        type,
+                        timestamp: Date.now(),
+                        payload: {
+                            symbol: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+                            side: SIDES[Math.floor(Math.random() * SIDES.length)],
+                            lots: (Math.random() * 5 + 0.1).toFixed(2),
+                            latencyMs: Math.floor(Math.random() * 150 + 10)
+                        }
+                    };
+                    setTradeUpdates((prev) => [msg, ...prev].slice(0, 100));
+                } else {
+                    msg = {
+                        type,
+                        timestamp: Date.now(),
+                        payload: {
+                            rule: 'Max Drawdown Exceeded',
+                            reason: `Account dropped below allowed equity limit. Open trades were evaluated.`,
+                        }
+                    };
+                    setRiskAlerts((prev) => [msg, ...prev].slice(0, 50));
+                }
+                setLastMessage(msg);
+            }, 3000); // 3 seconds per simulated event
+            return;
+        }
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws?token=${accessToken}`;
@@ -58,7 +100,8 @@ export function useWebSocket() {
         if (isAuthenticated) connect();
         return () => {
             clearTimeout(reconnectTimer.current);
-            wsRef.current?.close();
+            clearInterval(mockInterval.current);
+            if (!USE_MOCKS) wsRef.current?.close();
         };
     }, [isAuthenticated, connect]);
 

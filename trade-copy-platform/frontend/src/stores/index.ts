@@ -30,10 +30,39 @@ export const useAuthStore = create<AuthState>()(
 
 interface UIState {
     sidebarCollapsed: boolean;
+    theme: 'light' | 'dark';
     toggleSidebar: () => void;
+    toggleTheme: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
-    sidebarCollapsed: false,
-    toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
-}));
+export const useUIStore = create<UIState>()(
+    persist(
+        (set) => ({
+            sidebarCollapsed: false,
+            theme: 'dark', // default
+            toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+            toggleTheme: () => set((s) => {
+                const isDark = s.theme === 'dark';
+                const nextTheme = isDark ? 'light' : 'dark';
+                if (nextTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                return { theme: nextTheme };
+            }),
+        }),
+        {
+            name: 'tcp-ui-store',
+            onRehydrateStorage: () => (state) => {
+                if (state) {
+                    if (state.theme === 'dark') {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+            }
+        }
+    )
+);

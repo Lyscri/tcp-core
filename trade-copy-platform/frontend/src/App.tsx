@@ -12,7 +12,11 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AdminPage } from './pages/AdminPage';
 
+import { useAuthStore } from './stores';
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+    const { isAuthenticated } = useAuthStore();
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
     return <>{children}</>;
 }
 

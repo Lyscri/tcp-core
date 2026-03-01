@@ -1,9 +1,17 @@
 import { useAuthStore } from '../stores';
+import { handleMockRequest } from './mockApi';
 
 const API_BASE = '/api';
+export const USE_MOCKS = true;
 
 class ApiClient {
     private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+        if (USE_MOCKS) {
+            const response = await handleMockRequest(path, options);
+            if (!response.success) throw new Error('Mock request failed');
+            return response.data as T;
+        }
+
         const { accessToken } = useAuthStore.getState();
 
         const headers: Record<string, string> = {

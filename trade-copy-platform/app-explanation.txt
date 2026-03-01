@@ -1,0 +1,99 @@
+Plataforma de Trade Copy - Guía Explicativa del Proyecto
+Este documento explica de forma detallada cómo está estructurada y cómo funciona la aplicación Frontend Trade Copy Platform, específicamente en su fase de desarrollo actual, la cual opera utilizando un Sistema de Mocks con Estado (Stateful Mocks) sin necesidad de requerir un servidor backend o una base de datos activa.
+
+1. Arquitectura y Tecnologías Principales
+El proyecto está construido bajo los estándares más modernos de desarrollo web, con un enfoque en aplicaciones empresariales (Enterprise-grade).
+
+Librería Principal: React 18+
+Lenguaje: TypeScript (Para garantizar seguridad de tipos y evitar errores de ejecución de código).
+Empaquetador (Bundler): Vite (Proporciona recargas ultrarrápidas HMR en desarrollo).
+Estilos y UI: Tailwind CSS v3 (Utilizado para diseñar toda la aplicación rápidamente, incluyendo gradientes, glassmorfismo, y el sistema de Modo Claro / Modo Oscuro mediante variables CSS).
+Iconos: lucide-react
+Gráficos: Recharts (Utilizado para la página de Analytics).
+Enrutamiento: React Router v6 (Para navegar entre las distintas páginas sin recargar el navegador).
+Manejo de Estados Globales: Zustand (Se usa en src/stores/ para recordar si el usuario está logueado y el tema de colores actual).
+Manejo de Consultas ASYNC: TanStack React Query v5 (Se utiliza para interactuar con la API. Maneja el estado de carga (isLoading), los errores y la revalidación de datos en caché para mantener la UI sincronizada).
+2. El Sistema de Datos Simulados (Mock API)
+Como el backend (Node.js, Postgres, Redis, Kafka) está en desarrollo por otra persona, el Frontend está configurado para ser 100% interactivo mediante una base de datos "falsa" pero inteligente, alojada directamente en la memoria caché del navegador temporalmente.
+
+¿Cómo funciona la intercepción?
+Enrutador Central (
+src/lib/api.ts
+): Toda la aplicación hace peticiones de red (ej. api.get('/accounts')). Esta clase intercepta esas llamadas. Al tener la bandera USE_MOCKS = true, la aplicación ignora los servidores reales y envía las peticiones a 
+mockApi.ts
+.
+Base de Datos en Memoria (
+src/lib/mockApi.ts
+): Este archivo contiene variables JSON grandes (mockData). Cuando envías una petición POST o PUT desde la aplicación (por ejemplo, crear una cuenta de MetaTrader o actualizar una configuración de sincronización), el código modifica esos archivos JSON internamente, lo cual hace que los cambios persistan mientras tengas la página abierta o navegues entre pestañas.
+3. Estructura de Carpetas
+src/components/: Componentes reutilizables de UI. (Ej. 
+DashboardLayout.tsx
+ guarda el menú lateral y la barra superior superior, protegiendo todas las páginas hijas dentro de él).
+src/pages/: Cada archivo representa una vista completa de la aplicación.
+src/stores/: Controladores globales (useAuthStore para logueo y tokens, useUIStore para manejar el Modo Claro / Oscuro).
+src/lib/: Librerías y lógica principal (Cliente API, Sistema Mock).
+src/hooks/: Lógica extraída para reusabilidad (Como 
+useWebSocket.ts
+, ver más abajo).
+4. Funcionamiento de cada Sección / Página
+Autenticación (
+LoginPage.tsx
+ & 
+RegisterPage.tsx
+)
+Se encargan de pedir las credenciales.
+Mocks Actuales:
+Si inicias sesión escribiendo la palabra "user" en en correo (ej. user@trade.com), inicias como Usuario Normal.
+Si inicias con "admin" (ej. admin@trade.com), entras como Administrador.
+Esto se guarda en useAuthStore. Si el usuario carece de token, la ruta protegida (
+ProtectedRoute
+ en 
+App.tsx
+) lo saca de la página y lo obliga a volver al Login.
+Tablero Principal (
+DashboardPage.tsx
+)
+Muestra un resumen de alto nivel: Cuentas activas corriendo, Win Rate, trades totales, y PnL (Ganancias y pérdidas) de hoy frente a ayer.
+Tiene pequeños gráficos que ilustran el volumen reciente.
+Gestión de Cuentas (
+AccountsPage.tsx
+)
+Aquí se agregan credenciales de plataformas como MetaTrader 4/5, cTrader o FIX.
+Funcionalidad: Puedes "Agregar" nuevas cuentas y ver cómo se añaden a la lista global. Puedes designarlas como Leader (las cuentas maestras que enviarán las señales) o pausarlas.
+En la base de datos de producción real, el almacenamiento de credenciales irá encriptado a una base de datos de bóveda (Vault).
+Configuración de Sincronización (
+SyncConfigPage.tsx
+)
+El núcleo del Trade Copying. Aquí se escoge qué cuenta es la Lead (la que hace la operación original) y cuál es la Follower (la que copiará la operación).
+Modos de copia: Permite elegir reglas como lote proporcional (si el líder tiene $100k y tú $10k, y él abre 1 lote, a ti se te abrirá 0.1), multiplicador, riesgo basado en %, y si se deben Invertir los Trades (si el líder compra, tú vendes).
+Gestión de Riesgos (
+RiskPage.tsx
+)
+Reglas para proteger el capital. Puedes definir límites como "Drawdown Máximo" diario, prohibir ciertos símbolos (ej. bloquear acciones e índices para operar solo Forex), o detener todo cuando se alcanza una pérdida fija en dólares (Equity Stop).
+Monitor en Vivo (
+LiveMonitorPage.tsx
+) & Sistema de WebSockets
+Esta página no hace peticiones API normales, en su lugar se "suscribe" a un WebSocket bidireccional, lo que permite recibir notificaciones instantáneas emitidas por el Engine de backend.
+El Mock Inteligente: Dentro de 
+src/hooks/useWebSocket.ts
+, hay un sistema (mockInterval) que artificialmente cada 3 segundos inyecta transacciones falsas (ej. Compra EURUSD a 0.5 lotes en 30ms) o reporta excesos de riesgo aleatorios simulando tráfico real del servidor en tiempo real.
+Analíticas (
+AnalyticsPage.tsx
+)
+Usa los datos almacenados y la librería Recharts para graficar rendimientos PnL a lo largo del tiempo, y dibujar un diagrama radial para ver qué activos (Símbolos) se operan más frecuentemente.
+Facturación y Subscripciones (
+SubscriptionPage.tsx
+)
+La página de facturación. Consulta a la API tu estado actual de plan.
+El Modal Transaccional (pasarela de pagos simulada): Cuando quieres pagar un "Upgrade", te aparece un modal para llenar los datos de la tarjeta. Una vez confirmas, ocurre una animación simulando espera a un banco, finaliza, reinvalida la caché de React Query (para forzar a la pantalla a leer la base de datos nueva) y notarás que ahora refleja el nuevo plan y genera una factura instantánea de la compra en la tabla inferior.
+Panel de Administración (
+AdminPage.tsx
+)
+Panel exclusivo para los superadministradores de la plataforma. Pensado para gestionar a la propia empresa (control de usuarios, facturación, volumen mensual procesado por el servidor, y estatus de las microservicios del sistema backend en general). Se expandiría en base al rol de autenticación.
+5. Diseño y Estética UI (Modo Claro / Oscuro)
+La plataforma usa Variables CSS relativas RGB en 
+src/index.css
+ que se comunican con 
+tailwind.config.js
+. Esto le permite inyectar opacidades dinámicas (bg-surface-900/50).
+Los contenedores de texto, tarjetas de estadísticas y gráficas leen estas clases, y por ende, cambian todos sus colores adaptándose automáticamente respetando una paleta azul marino en fondos negros, o textos oscuros sobre fondos blancos nítidos para alta visibilidad (.glass-card), haciéndolo profesional y moderno. El estilo glass proporciona un efecto mate difuminado en los fondos del panel o el menú.

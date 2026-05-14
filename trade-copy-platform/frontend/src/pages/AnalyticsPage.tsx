@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useRef } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { BarChart3, Download } from 'lucide-react';
+import { BarChart3, Download, RefreshCw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import clsx from 'clsx';
 
@@ -40,9 +41,19 @@ export function AnalyticsPage() {
                     <h2 className="text-2xl font-bold">Analytics</h2>
                     <p className="text-surface-200/50 text-sm mt-1">Performance metrics and trade analysis</p>
                 </div>
-                <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
-                    <Download size={16} /><span>Export CSV</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
+                        <Download size={16} /><span>Export CSV</span>
+                    </button>
+                    <button onClick={() => {
+                        // Trigger refetch of queries
+                        const queryClient = new QueryClient();
+                        queryClient.invalidateQueries({ queryKey: ['analytics', 'pnl', 'daily'] });
+                        queryClient.invalidateQueries({ queryKey: ['analytics', 'symbols'] });
+                    }} className="btn-secondary flex items-center gap-2">
+                        <RefreshCw size={16} /><span>Refresh Data</span>
+                    </button>
+                </div>
             </div>
 
             <div className="glass-card">

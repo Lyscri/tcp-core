@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, LucideProps } from 'lucide-react';
 
 export function RegisterPage() {
     const [name, setName] = useState('');
@@ -9,8 +9,26 @@ export function RegisterPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isRemembered, setIsRemembered] = useState(false);
     const { setTokens } = useAuthStore();
     const navigate = useNavigate();
+    
+    // Refs for animation elements
+    const nameRef = useRef<HTMLInputElement>(null);
+    const emailRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+    const formRef = useRef<HTMLFormElement>(null);
+    
+    // Auto-focus name field on mount
+    // Load remember me preference
+    useEffect(() => {
+        nameRef.current?.focus();
+        
+        const remembered = localStorage.getItem('tcp_remember_me');
+        if (remembered === 'true') {
+            setIsRemembered(true);
+        }
+    }, []);
 
     const passwordChecks = [
         { label: '8+ characters', ok: password.length >= 8 },
@@ -33,6 +51,14 @@ export function RegisterPage() {
             const body = await response.json();
             if (!body.success) { setError(body.error?.message ?? 'Registration failed'); return; }
             setTokens(body.data.accessToken, body.data.refreshToken);
+            
+            // Save remember me preference
+            if (isRemembered) {
+                localStorage.setItem('tcp_remember_me', 'true');
+            } else {
+                localStorage.removeItem('tcp_remember_me');
+            }
+            
             navigate('/');
         } catch { setError('Network error'); } finally { setLoading(false); }
     };
@@ -67,6 +93,15 @@ export function RegisterPage() {
                                     {c.ok && <Check size={10} />}{c.label}
                                 </span>
                             ))}
+                        </div>
+                    </div>
+
+                    <div className="flex items-start">
+                        <div className="flex items-center h-4">
+                            <input id="remember-me-reg" type="checkbox" checked={isRemembered} onChange={(e) => setIsRemembered(e.target.checked)} className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded" />
+                        </div>
+                        <div className="ml-3 text-sm">
+                            <label for="remember-me-reg" className="text-surface-200/50">Remember me</label>
                         </div>
                     </div>
                     <button id="register-submit" type="submit" disabled={loading || !passwordChecks.every((c) => c.ok)} className="btn-primary w-full flex items-center justify-center gap-2">

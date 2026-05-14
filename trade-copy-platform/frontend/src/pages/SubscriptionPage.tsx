@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { CreditCard, Check, Zap, Star, Building2, Loader2, X } from 'lucide-react';
+import { CreditCard, Check, Zap, Star, Building2, Loader2, X, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 
 const planIcons: Record<string, any> = { FREE: Zap, STARTER: Star, PROFESSIONAL: CreditCard, ENTERPRISE: Building2 };
@@ -122,9 +122,20 @@ export function SubscriptionPage() {
                 </div>
             )}
 
-            <div>
-                <h2 className="text-2xl font-bold">Subscription</h2>
-                <p className="text-surface-200/50 text-sm mt-1">Manage your plan and billing</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">Subscription</h2>
+                    <p className="text-surface-200/50 text-sm mt-1">Manage your plan and billing</p>
+                </div>
+                <button onClick={() => {
+                    // Trigger refetch of queries
+                    const queryClient = useQueryClient();
+                    queryClient.invalidateQueries({ queryKey: ['subscription'] });
+                    queryClient.invalidateQueries({ queryKey: ['plans'] });
+                    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+                }} className="btn-secondary flex items-center gap-2">
+                    <RefreshCw size={16} /><span>Refresh Data</span>
+                </button>
             </div>
 
             <div className="glass-card">

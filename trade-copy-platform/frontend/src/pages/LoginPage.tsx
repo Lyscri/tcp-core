@@ -4,16 +4,24 @@ import { useAuthStore } from '../stores';
 import { api } from '../lib/api';
 import { Eye, EyeOff, ArrowRight, LucideProps } from 'lucide-react';
 
+// Error types for better handling
+type LoginError = 
+  | { type: 'NETWORK_ERROR'; message: string }
+  | { type: 'INVALID_CREDENTIALS'; message: string }
+  | { type: 'SESSION_EXPIRED'; message: string }
+  | { type: 'SERVER_ERROR'; message: string }
+  | { type: 'UNKNOWN_ERROR'; message: string };
+
 export function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [twoFactorCode, setTwoFactorCode] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [needs2FA, setNeeds2FA] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<LoginError | null>(null);
     const [loading, setLoading] = useState(false);
     const [isRemembered, setIsRemembered] = useState(false);
-    const { setTokens, setUser } = useAuthStore();
+    const { setTokens, setUser, logout } = useAuthStore();
     const navigate = useNavigate();
     
     // Refs for animation elements
@@ -31,42 +39,104 @@ export function LoginPage() {
             setIsRemembered(true);
         }
     }, []);
-
+    
+    // Helper to classify errors
+    const classifyError = (error: any): LoginError => {
+      if (!error) {
+        return { type: 'UNKNOWN_ERROR', message: 'An unknown error occurred' };
+      }
+      
+      // Network errors
+      if (error.message?.includes('Network') || 
+          error.message?.includes('fetch') || 
+          error.message?.includes('failed to fetch')) {
+        return { type: 'NETWORK_ERROR', message: 'Unable to connect to server. Please check your internet connection.' };
+      }
+      
+      // HTTP status based errors
+      if (error.response) {
+        switch (error.response.status) {
+          case 400:
+          case 401:
+          case 403:
+            return { type: 'INVALID_CREDENTIALS', message: 'Invalid email or password. Please try again.' };
+          case 408:
+            return { type: 'NETWORK_ERROR', message: 'Request timeout. Please try again.' };
+          case 429:
+            return { type: 'NETWORK_ERROR', message: 'Too many requests. Please wait a moment and try again.' };
+          case 500:
+          case 502:
+          case 503:
+          case 504:
+            return { type: 'SERVER_ERROR', message: 'Server is experiencing issues. Please try again later.' };
+          default:
+            return { type: 'SERVER_ERROR', message: `Server error (${error.response.status}). Please try again.` };
+        }
+      }
+      
+      // Auth specific errors from our API
+      if (error.message?.includes('Invalid credentials') || 
+          error.message?.includes('invalid email') || 
+          error.message?.includes('invalid password')) {
+        return { type: 'INVALID_CREDENTIALS', message: 'Invalid email or password. Please try again.' };
+      }
+      
+      if (error.message?.includes('Session expired') || 
+          error.message?.includes('token') || 
+          error.message?.includes('authentication')) {
+        return { type: 'SESSION_EXPIRED', message: 'Your session has expired. Please log in again.' };
+      }
+      
+      // Default fallback
+      return { 
+        type: 'UNKNOWN_ERROR', 
+        message: error.message || 'An unexpected error occurred. Please try again.' 
+      };
+    };
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        setError(null);
         setLoading(true);
-
+        
         try {
             const body = await api.post<any>('/auth/login', {
                 email,
                 password,
                 twoFactorCode: needs2FA ? twoFactorCode : undefined
             });
-
+            
             if (body.requiresTwoFactor) {
                 setNeeds2FA(true);
                 return;
             }
-
+            
             setTokens(body.accessToken, body.refreshToken);
-
+            
             // Fetch profile
             const profileBody = await api.get<any>('/auth/me');
             if (profileBody.user) {
                 setUser(profileBody.user);
             }
-
+            
             // Save remember me preference
             if (isRemembered) {
                 localStorage.setItem('tcp_remember_me', 'true');
             } else {
                 localStorage.removeItem('tcp_remember_me');
             }
-
+            
             navigate('/');
         } catch (err: any) {
-            setError(err.message || 'Login failed');
+            const classifiedError = classifyError(err);
+            setError(classifiedError);
+            
+            // Handle special cases
+            if (classifiedError.type === 'SESSION_EXPIRED') {
+                // Clear auth state and redirect to login
+                logout();
+                // Stay on login page (we're already here)
+            }
         } finally {
             setLoading(false);
         }
@@ -86,8 +156,35 @@ export function LoginPage() {
                     <p className="text-surface-200/50 mt-1 text-sm">Sign in to your trade copy account</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2.5 rounded-xl text-sm">{error}</div>}
+                 <form onSubmit={handleSubmit} className="space-y-4">
+                     {error && (
+                         <div 
+                             className="bg-red-500/10 border border-red-500/20 px-4 py-2.5 rounded-xl text-sm flex items-center gap-3"
+                             role="alert"
+                         >
+                             {error.type === 'NETWORK_ERROR' && <span className="flex items-center gap-2">
+                                 <span className="material-icons">wifi_off</span>
+                                 Connection Error
+                             </span>}
+                             {error.type === 'INVALID_CREDENTIALS' && <span className="flex items-center gap-2">
+                                 <span className="material-icons">error</span>
+                                 Invalid Credentials
+                             </span>}
+                             {error.type === 'SESSION_EXPIRED' && <span className="flex items-center gap-2">
+                                 <span className="material-icons">logout</span>
+                                 Session Expired
+                             </span>}
+                             {error.type === 'SERVER_ERROR' && <span className="flex items-center gap-2">
+                                 <span className="material-icons">server_error</span>
+                                 Server Error
+                             </span>}
+                             {error.type === 'UNKNOWN_ERROR' && <span className="flex items-center gap-2">
+                                 <span className="material-icons">help_outline</span>
+                                 Unknown Error
+                             </span>}
+                             <span>{error.message}</span>
+                         </div>
+                     )}
 
                     <div>
                         <label className="text-sm font-medium text-surface-200/70 mb-1.5 block">Email</label>

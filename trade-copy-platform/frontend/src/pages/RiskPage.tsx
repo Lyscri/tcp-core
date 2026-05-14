@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useRef } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { Shield, AlertTriangle, Power } from 'lucide-react';
+import { Shield, AlertTriangle, Power, RefreshCw } from 'lucide-react';
 
 export function RiskPage() {
     const queryClient = useQueryClient();
@@ -8,9 +8,22 @@ export function RiskPage() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-bold">Risk Control Panel</h2>
-                <p className="text-surface-200/50 text-sm mt-1">Configure risk limits and kill switches per account</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold">Risk Control Panel</h2>
+                    <p className="text-surface-200/50 text-sm mt-1">Configure risk limits and kill switches per account</p>
+                </div>
+                <button onClick={() => {
+                    // Trigger refetch of queries
+                    const queryClient = useQueryClient();
+                    queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                    // Also invalidate all risk queries
+                    accounts.forEach((account: any) => {
+                        queryClient.invalidateQueries({ queryKey: ['risk', account.id] });
+                    });
+                }} className="btn-secondary flex items-center gap-2">
+                    <RefreshCw size={16} /><span>Refresh All</span>
+                </button>
             </div>
 
             {accounts.length === 0 && <p className="text-center text-surface-200/40 py-12">No accounts to configure risk for.</p>}

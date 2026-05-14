@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { Plus, Trash2, Power, Crown } from 'lucide-react';
@@ -7,8 +7,16 @@ export function AccountsPage() {
     const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState({ brokerType: 'SIMULATED', accountId: '', label: '', credentials: '{}' });
+    const brokerSelectRef = useRef<HTMLSelectElement>(null);
 
     const { data: accounts = [] } = useQuery<any[]>({ queryKey: ['accounts'], queryFn: () => api.get('/accounts/') });
+
+    // Focus broker select when form opens
+    useEffect(() => {
+        if (showForm && brokerSelectRef.current) {
+            brokerSelectRef.current.focus();
+        }
+    }, [showForm]);
 
     const createMutation = useMutation({
         mutationFn: (data: any) => api.post('/accounts/', data),
@@ -47,8 +55,8 @@ export function AccountsPage() {
                     <h3 className="font-semibold mb-4">Connect New Broker Account</h3>
                     <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ ...form, credentials: JSON.parse(form.credentials || '{}') }); }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-sm text-surface-200/60 mb-1.5 block">Broker Type</label>
-                            <select value={form.brokerType} onChange={(e) => setForm((f) => ({ ...f, brokerType: e.target.value }))} className="input w-full">
+<label className="text-sm text-surface-200/60 mb-1.5 block">Broker Type</label>
+                             <select ref={brokerSelectRef} value={form.brokerType} onChange={(e) => setForm((f) => ({ ...f, brokerType: e.target.value }))} className="input w-full">
                                 <option value="SIMULATED">Simulated</option>
                                 <option value="MT4">MetaTrader 4</option>
                                 <option value="MT5">MetaTrader 5</option>

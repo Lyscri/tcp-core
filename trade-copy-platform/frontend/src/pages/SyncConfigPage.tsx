@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { Plus, Trash2, Power, Link2 } from 'lucide-react';
+import { Plus, Trash2, Power, Link2, RefreshCw } from 'lucide-react';
 
 export function SyncConfigPage() {
     const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState({ leaderAccountId: '', followerAccountId: '', copyMode: 'PROPORTIONAL', multiplier: 1, maxLotSize: 100, invertTrades: false });
+    const leaderAccountSelectRef = useRef<HTMLSelectElement>(null);
+    const followerAccountSelectRef = useRef<HTMLSelectElement>(null);
+    const formRef = useRef<HTMLFormElement>(null);
+
+    // Focus leader account select when form opens
+    useEffect(() => {
+        if (showForm) {
+            if (leaderAccountSelectRef.current) {
+                leaderAccountSelectRef.current.focus();
+            } else if (followerAccountSelectRef.current) {
+                followerAccountSelectRef.current.focus();
+            }
+        }
+    }, [showForm]);
 
     const { data: configs = [] } = useQuery<any[]>({ queryKey: ['sync-configs'], queryFn: () => api.get('/accounts/sync-configs') });
     const { data: accounts = [] } = useQuery<any[]>({ queryKey: ['accounts'], queryFn: () => api.get('/accounts/') });
@@ -35,27 +49,37 @@ export function SyncConfigPage() {
                     <h2 className="text-2xl font-bold">Sync Configuration</h2>
                     <p className="text-surface-200/50 text-sm mt-1">Configure trade copying between leader and follower accounts</p>
                 </div>
-                <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2"><Plus size={18} /><span>New Config</span></button>
+                <div className="flex items-center gap-3">
+                    <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2"><Plus size={18} /><span>New Config</span></button>
+                    <button onClick={() => {
+                        // Trigger refetch of queries
+                        const queryClient = useQueryClient();
+                        queryClient.invalidateQueries({ queryKey: ['sync-configs'] });
+                        queryClient.invalidateQueries({ queryKey: ['accounts'] });
+                    }} className="btn-secondary flex items-center gap-2">
+                        <RefreshCw size={16} /><span>Refresh Data</span>
+                    </button>
+                </div>
             </div>
 
             {showForm && (
                 <div className="glass-card animate-slide-up">
                     <h3 className="font-semibold mb-4">Create Sync Configuration</h3>
                     <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-sm text-surface-200/60 mb-1.5 block">Leader Account</label>
-                            <select value={form.leaderAccountId} onChange={(e) => setForm((f) => ({ ...f, leaderAccountId: e.target.value }))} className="input w-full" required>
-                                <option value="">Select leader...</option>
-                                {accounts.filter((a: any) => a.isLeader).map((a: any) => <option key={a.id} value={a.id}>{a.label}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-sm text-surface-200/60 mb-1.5 block">Follower Account</label>
-                            <select value={form.followerAccountId} onChange={(e) => setForm((f) => ({ ...f, followerAccountId: e.target.value }))} className="input w-full" required>
-                                <option value="">Select follower...</option>
-                                {accounts.filter((a: any) => !a.isLeader).map((a: any) => <option key={a.id} value={a.id}>{a.label}</option>)}
-                            </select>
-                        </div>
+                         <div>
+                             <label className="text-sm text-surface-200/60 mb-1.5 block">Leader Account</label>
+                             <select ref={leaderAccountSelectRef} value={form.leaderAccountId} onChange={(e) => setForm((f) => ({ ...f, leaderAccountId: e.target.value }))} className="input w-full" required>
+                                 <option value="">Select leader...</option>
+                                 {accounts.filter((a: any) => a.isLeader).map((a: any) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                             </select>
+                         </div>
+                         <div>
+                             <label className="text-sm text-surface-200/60 mb-1.5 block">Follower Account</label>
+                             <select ref={followerAccountSelectRef} value={form.followerAccountId} onChange={(e) => setForm((f) => ({ ...f, followerAccountId: e.target.value }))} className="input w-full" required>
+                                 <option value="">Select follower...</option>
+                                 {accounts.filter((a: any) => !a.isLeader).map((a: any) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                             </select>
+                         </div>
                         <div>
                             <label className="text-sm text-surface-200/60 mb-1.5 block">Copy Mode</label>
                             <select value={form.copyMode} onChange={(e) => setForm((f) => ({ ...f, copyMode: e.target.value }))} className="input w-full">

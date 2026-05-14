@@ -61,6 +61,8 @@ export const useUIStore = create<UIState>()(
                     } else {
                         document.documentElement.classList.remove('dark');
                     }
+                    // Apply sidebar state on rehydration
+                    // This is handled by the component reading the state
                 }
             }
         }
